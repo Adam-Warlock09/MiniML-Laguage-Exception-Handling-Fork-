@@ -20,6 +20,12 @@
 %token LET
 %token SEMISEMI
 %token EOF
+%token TRY
+%token WITH
+%token LCURLY
+%token RCURLY
+%token DIVZERO
+%token BAR
 
 %start file
 %type <Syntax.command list> file
@@ -80,6 +86,8 @@ plain_expr:
     { If (e1, e2, e3) }
   | FUN x = VAR LPAREN f = VAR COLON t1 = ty RPAREN COLON t2 = ty IS e = expr
     { Fun (x, f, t1, t2, e) }
+  | TRY LCURLY e1 = expr RCURLY WITH LCURLY BAR DIVZERO TARROW e2 = expr RCURLY
+    { TryWith(e1, DivisionByZero, e2) }
 
 app_expr: mark_position(plain_app_expr) { $1 }
 plain_app_expr:

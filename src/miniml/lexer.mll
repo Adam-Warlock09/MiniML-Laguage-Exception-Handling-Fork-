@@ -18,6 +18,12 @@ rule token = parse
   | "then"          { THEN }
   | "else"          { ELSE }
   | "let"           { LET }  
+  | "try"           { TRY }
+  | "with"          { WITH }
+  | "{"             { LCURLY }
+  | "}"             { RCURLY }
+  | "DivisionByZero" { DIVZERO }
+  | "|"             { BAR }
   | ";;"            { SEMISEMI }
   | '='             { EQUAL }
   | '<'             { LESS }

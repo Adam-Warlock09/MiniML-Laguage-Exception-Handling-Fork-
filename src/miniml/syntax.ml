@@ -3,6 +3,10 @@
 (* Variable names *)
 type name = string
 
+(* Exceptions *)
+type exceptionId =
+  | DivisionByZero
+
 (* Types *)
 type ty =
   | TInt              (* Integers *)
@@ -24,6 +28,7 @@ and expr' =
   | If of expr * expr * expr 		(* Conditional [if e1 then e2 else e3] *)
   | Fun of name * name * ty * ty * expr (* Function [fun f(x:s):t is e] *)
   | Apply of expr * expr 		(* Application [e1 e2] *)
+  | TryWith of expr * exceptionId * expr (* try {e1} with  { |exn -> e2} *)
 
 (* Toplevel commands *)
 type command =
