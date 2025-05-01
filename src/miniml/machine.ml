@@ -29,7 +29,7 @@ type name = Syntax.name
 type mvalue =
   | MInt of int                        (** Integer *)
   | MBool of bool                      (** Boolean value *)
-  | MClosure of name * frame * environ (** Closure *)
+  | MClosure of name * frame * environ * Syntax.ty (** Closure *) (* I have modified to add a Syntax.ty to have the type of the argument as well *)
   | MException of Syntax.exceptionId   (** MValue for Eceptions so we can add them to the mvalue or machinevalues stack **)
 
 (**
@@ -53,7 +53,7 @@ and instr =
   | IVar of name  		    (** push value of variable *)
   | IInt of int   		    (** push integer constant *)
   | IBool of bool 		    (** push boolean constant *)
-  | IClosure of name * name * frame (** push closure *)
+  | IClosure of name * name * frame * Syntax.ty (** push closure *) (* Updated Iclosure instruction to take type of parameter as well. so that we can check if the type of parameter is correct while calling the function *)
   | IBranch of frame * frame        (** branch *)
   | ICall                           (** execute a closure *)
   | IPopEnv                         (** pop environment *)
@@ -82,6 +82,7 @@ let string_of_mvalue = function
   | MClosure _ -> "<fun>" (* Closures cannot be reasonably displayed *)
   | MException exceptn -> match exceptn with
     | Syntax.DivisionByZero -> "Division By Zero" (* Added way to print the exception when needed *)
+    | Syntax.GenericException value -> "Generic Exception : " ^ string_of_int value
 
 (** [lookup x envs] scans through the list of environments [envs] and
     returns the first value of variable [x] found. *)
@@ -101,7 +102,7 @@ let pop_bool = function
 
 (** Pop a value and a closure from a stack. *)
 let pop_app = function
-  | v :: MClosure (x, f, e) :: s -> (x, f, e, v, s)
+  | v :: MClosure (x, f, e, typ) :: s -> (x, f, e, v, s, typ) (* Updated pop function for closure from machine vlue stack to include the parameter type so it can be checked for correct ness *)
   | _ -> error "value and closure expected"
 
 (** Arithmetical operations take their arguments from a stack and put the
@@ -110,38 +111,43 @@ let pop_app = function
 (** Multiplication *)
 let mult = function
   | (MInt x) :: (MInt y) :: s -> MInt (y * x) :: s
-  | _ -> error "int and int expected in mult"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (* Division *)
 let div = function
   | (MInt 0) :: (MInt _) :: s -> MException Syntax.DivisionByZero :: s (* Adding the division by zero exception to mvalue stack in the form of mvalue to later get that when checking try with and IHandle *)
   | (MInt x) :: (MInt y) :: s -> MInt (y / x) :: s
-  | _ -> error "int and int expected in div"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (** Addition *)
 let add = function
   | (MInt x) :: (MInt y) :: s -> MInt (y + x) :: s
-  | _ -> error "int and int expected in add"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (** Subtraction *)
 let sub = function
   | (MInt x) :: (MInt y) :: s -> MInt (y - x) :: s
-  | _ -> error "int and int expected in sub"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (** Equality *)
 let equal = function
   | (MInt x) :: (MInt y) :: s -> MBool (y = x) :: s
-  | _ -> error "int and int expected in equal"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (** Less than *)
 let less = function
   | (MInt x) :: (MInt y) :: s -> MBool (y < x) :: s
-  | _ -> error "int and int expected in less"
+  | _ -> [MException (Syntax.GenericException (-1))] (* Return a new mvalue stack having only the exception (because wrong type)  *)
 
 (** [exec instr frms stck envs] executes instruction [instr] in the
     given state [(frms, stck, envs)], where [frms] is a stack of frames,
     [stck] is a stack of machine values, and [envs] is a stack of
     environments. The return value is a new state. *)
+
+let typeof = function
+| MInt _ -> Syntax.TInt
+| MBool _ -> Syntax.TBool
+| _ -> Syntax.TException
 let exec instr frms stck envs =
   match instr with
     (* Arithmetic *)
@@ -155,19 +161,20 @@ let exec instr frms stck envs =
     | IVar x  -> (frms, (lookup x envs) :: stck, envs)
     | IInt k  -> (frms, (MInt k) :: stck, envs)
     | IBool b -> (frms, (MBool b) :: stck, envs)
-    | IClosure (f, x, frm) ->
+    | IClosure (f, x, frm, typ) -> (* Closure instruction keeps carrying the parameter type of the function call *)
 	(match envs with
 	     env :: _ ->
-	       let rec c = MClosure (x, frm, (f,c) :: env) in
+	       let rec c = MClosure (x, frm, (f,c) :: env, typ) in
 		 (frms, c :: stck, envs)
 	   | [] -> error "no environment for a closure")
     (* Control instructions *)
     | IBranch (f1, f2) ->
 	let (b, stck') = pop_bool stck in
 	  ((if b then f1 else f2) :: frms, stck', envs)
-    | ICall ->
-	let (x, frm, env, v, stck') = pop_app stck in
-	  (frm :: frms, stck', ((x,v) :: env) :: envs)
+    | ICall -> (* Updated Icall instruction to check for the parameter type matching the required type by the function when called *)
+	let (x, frm, env, v, stck', ty) = pop_app stck in
+    if (typeof v) = ty then (frm :: frms, stck', ((x,v) :: env) :: envs) (* If the type matches we continue as normal, adding the new frame for the new function block and adding the name value pair in the env stack *)
+    else (frms, [MException (Syntax.GenericException (-1))], envs) (* Otherwise we dont add the frae it being invalid, and also not the environments, ad we have the mvalues stack as athe exception *)
     | IPopEnv ->
 	(match envs with
 	     [] -> error "no environment to pop"

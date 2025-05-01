@@ -27,6 +27,7 @@
 %token DIVZERO
 %token BAR
 %token RAISE
+%token GENEXP
 
 %start file
 %type <Syntax.command list> file
@@ -95,6 +96,10 @@ plain_expr:
 exceptn:
   | DIVZERO 
     { DivisionByZero }
+  | GENEXP e = INT
+    { GenericException e }
+  | GENEXP MINUS e = INT
+    { GenericException (-e) }
 
 app_expr: mark_position(plain_app_expr) { $1 }
 plain_app_expr:

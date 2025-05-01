@@ -6,6 +6,7 @@ type name = string
 (* Exceptions *)
 type exceptionId =
   | DivisionByZero
+  | GenericException of int
 
 (* Types *)
 type ty =

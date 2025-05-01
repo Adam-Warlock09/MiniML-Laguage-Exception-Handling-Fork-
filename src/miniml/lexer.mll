@@ -23,6 +23,7 @@ rule token = parse
   | "{"             { LCURLY }
   | "}"             { RCURLY }
   | "DivisionByZero" { DIVZERO }
+  | "GenericException" { GENEXP }
   | "|"             { BAR }
   | "raise"         { RAISE }
   | ";;"            { SEMISEMI }
