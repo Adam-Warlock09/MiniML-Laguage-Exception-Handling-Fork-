@@ -1,0 +1,150 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\titleformat{\section}[block]{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}[block]{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+
+\title{Extending the Minimal Language with Exceptions\\[0.5em]
+\large A PL Zoo Language Extension Project}
+\author{
+  Name: Aric Maji \\
+  Roll Number: CS24BTECH11007 \\
+  Department of Computer Science \\
+  IIT Hyderabad
+}
+\date{\today}
+
+\definecolor{codegray}{gray}{0.9}
+\lstset{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Overview}
+
+This project extends the \texttt{minimal} language from PL Zoo to support exception handling. We introduce two new language constructs:
+\begin{itemize}[itemsep=0.5em]
+  \item \texttt{raise E} — raises an exception with tag \texttt{E}
+  \item \texttt{try \{e1\} with \{|E -> e2\}} — evaluates \texttt{e1} and, if it raises \texttt{E}, evaluates handler \texttt{e2}
+\end{itemize}
+
+We handle these constructs by modifying the lexer, parser, abstract syntax tree, compiler, and abstract machine.
+
+\section{Formal Description of Language Extension}
+
+\subsection{Syntax Additions}
+
+We extend the grammar to support:
+\begin{lstlisting}
+expr:
+  ...
+  | raise DivisionByZero;;              // raise DivisionByZero
+  | try {20} with {|DivisionByZero -> 10}  // try e1 with DivisionByZero -> e2
+\end{lstlisting}
+
+\subsection{Example}
+
+The following expression raises and catches a division-by-zero error:
+
+\begin{lstlisting}
+try {10 / 0} with { |DivisionByZero -> 42 }
+\end{lstlisting}
+
+This returns \texttt{42} instead of failing. And :
+
+\begin{lstlisting}
+try {10 / 2} with { |DivisionByZero -> 42 }
+\end{lstlisting}
+
+This will return \texttt{5} Because the exception isnt raised.
+
+\section{README (User Guide)}
+
+\subsection{Build Instructions}
+
+1. Clone the PL Zoo repository and navigate to the \texttt{minimal} language directory.
+
+\noindent2. Build the project using \texttt{dune}:
+\begin{lstlisting}
+$ dune build
+\end{lstlisting}
+
+3. Run the interpreter:
+\begin{lstlisting}
+$ ./miniml.exe
+\end{lstlisting}
+
+\subsection{Usage}
+
+You can now write expressions involving exceptions:
+
+\begin{itemize}[itemsep=0.5em]
+  \item \texttt{raise DivisionByZero}
+  \item \texttt{try \{e1\} with \{|E -> e2\}}
+\end{itemize}
+
+These work for any top-level expressions or inside function bodies.
+
+\section{Git Snapshot}
+
+\includegraphics[width=\textwidth]{git-log-snapshot.png}
+
+(Include a screenshot of your Git commit history.)
+
+\section{Limitations}
+
+\begin{itemize}
+  \item Only tagged exceptions are supported (\texttt{DivisionByZero}, \texttt{GenericException} (Partially)).
+  \item You cannot pattern match the payload of exceptions (e.g., \texttt{GenericException of int} is not deeply matched).
+  \item Nested \texttt{try-with} blocks are supported, but handlers do not retain stack traces or messages.
+  \item The GenericException doesnt yet work till now due to some small bugs
+\end{itemize}
+
+\section{Verification Approach}
+
+We tested our implementation with the following categories of test cases:
+
+\begin{itemize}
+  \item Simple raises and catches
+  \item Uncaught exceptions
+  \item Nested \texttt{try-with} expressions
+  \item Arithmetic operations inside exception handlers
+  \item Test cases in the Problem statement
+\end{itemize}
+
+Example test:
+
+\begin{lstlisting}
+try
+ {21/0}
+with{
+ | DivisionByZero -> 0
+};;
+\end{lstlisting}
+
+This correctly returns \texttt{0}.
+
+\section{Key Learnings}
+
+\begin{itemize}
+  \item Learned how exceptions can be implemented using control stacks, not OCaml’s own exceptions.
+  \item Understood how compilers and virtual machines represent and execute higher-level features.
+  \item Understood the importance of stack discipline and environments when emulating control flow.
+  \item Gained experience in modifying all stages of a language: lexer, parser, AST, compiler, and abstract machine.
+\end{itemize}
+
+\end{document}
