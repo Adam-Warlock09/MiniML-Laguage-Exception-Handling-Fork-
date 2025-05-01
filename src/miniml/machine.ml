@@ -30,6 +30,7 @@ type mvalue =
   | MInt of int                        (** Integer *)
   | MBool of bool                      (** Boolean value *)
   | MClosure of name * frame * environ (** Closure *)
+  | MException of Syntax.exceptionId   (** MValue for Eceptions so we can add them to the mvalue or machinevalues stack **)
 
 (**
    There are two kinds of machine instructions.
@@ -44,7 +45,7 @@ type mvalue =
 
 and instr =
   | IMult                           (** multiplication *)
-  | IDiv                           (** Division *)
+  | IDiv                            (** Division *)
   | IAdd                            (** addition *)
   | ISub                            (** subtraction *)
   | IEqual                          (** equality *)
@@ -56,6 +57,8 @@ and instr =
   | IBranch of frame * frame        (** branch *)
   | ICall                           (** execute a closure *)
   | IPopEnv                         (** pop environment *)
+  | IHandle of Syntax.exceptionId * frame (** Handle a Raised Exception while compiling frame1 by compiling frame2 **)
+  | IRaise of Syntax.exceptionId    (** Raise a Exception when needed *)
 
 (** A frame is a list (stack) of instructions *)
 and frame = instr list
@@ -76,7 +79,9 @@ let error msg = raise (Machine_error msg)
 let string_of_mvalue = function
   | MInt k -> string_of_int k
   | MBool b -> string_of_bool b
-  | MClosure _ -> "<fun>" (** Closures cannot be reasonably displayed *)
+  | MClosure _ -> "<fun>" (* Closures cannot be reasonably displayed *)
+  | MException exceptn -> match exceptn with
+    | Syntax.DivisionByZero -> "Division By Zero" (* Added way to print the exception when needed *)
 
 (** [lookup x envs] scans through the list of environments [envs] and
     returns the first value of variable [x] found. *)
@@ -109,6 +114,7 @@ let mult = function
 
 (* Division *)
 let div = function
+  | (MInt 0) :: (MInt _) :: s -> MException Syntax.DivisionByZero :: s (* Adding the division by zero exception to mvalue stack in the form of mvalue to later get that when checking try with and IHandle *)
   | (MInt x) :: (MInt y) :: s -> MInt (y / x) :: s
   | _ -> error "int and int expected in div"
 
@@ -166,6 +172,12 @@ let exec instr frms stck envs =
 	(match envs with
 	     [] -> error "no environment to pop"
 	   | _ :: envs' -> (frms, stck, envs'))
+    | IRaise exceptn -> 
+      ([], [MException exceptn], []) (* When new exception is raised, naturally there's nothing more to run so the frame stack becomes empty and env stack also not needed. Only exptn mvlaue is added *)
+    | IHandle (exceptn, f2) ->
+      let (current_mvalue, restStack) = pop stck in
+      (* Check if current mvalue when Ihandle is run (i.e, the compile or evaluation for the try block) has a exception mvalue (due to some exception raised in it).*)
+        if (string_of_mvalue (MException exceptn) = string_of_mvalue current_mvalue) then (f2 :: frms, restStack, envs) else (frms, stck, envs) (* then we add the with block frame to stack of frames and then remove the exception mvalue from mvalue stack otherwise we leave machine state as is. *)
 
 (** [run frm env] executes the frame [frm] in environment [env]. *)
 let run frm env =

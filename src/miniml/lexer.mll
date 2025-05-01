@@ -24,6 +24,7 @@ rule token = parse
   | "}"             { RCURLY }
   | "DivisionByZero" { DIVZERO }
   | "|"             { BAR }
+  | "raise"         { RAISE }
   | ";;"            { SEMISEMI }
   | '='             { EQUAL }
   | '<'             { LESS }

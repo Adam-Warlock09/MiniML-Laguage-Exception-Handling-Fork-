@@ -31,6 +31,10 @@ and type_of ctx {Zoo.data=e; loc} =
     | Minus (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TInt
     | Equal (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TBool
     | Less (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TBool
+    | Raise _ -> TException (* We now have to add a exception type to pass the type checker *)
+    | TryWith (f1, _, f2) -> 
+      let ty = type_of ctx f1 in
+      if ty = TException then type_of ctx f2 else ty
     | If (e1, e2, e3) ->
       check ctx TBool e1 ;
       let ty = type_of ctx e2 in

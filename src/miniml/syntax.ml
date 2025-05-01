@@ -11,6 +11,7 @@ type exceptionId =
 type ty =
   | TInt              (* Integers *)
   | TBool             (* Booleans *)
+  | TException        (* Exceptions *)
   | TArrow of ty * ty (* Functions *)
 
 (* Expressions *)
@@ -29,6 +30,7 @@ and expr' =
   | Fun of name * name * ty * ty * expr (* Function [fun f(x:s):t is e] *)
   | Apply of expr * expr 		(* Application [e1 e2] *)
   | TryWith of expr * exceptionId * expr (* try {e1} with  { |exn -> e2} *)
+  | Raise of exceptionId (*raise exn*)
 
 (* Toplevel commands *)
 type command =
