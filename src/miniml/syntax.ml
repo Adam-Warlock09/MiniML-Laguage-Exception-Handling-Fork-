@@ -18,6 +18,7 @@ and expr' =
   | Times of expr * expr 		(* Product [e1 * e2] *)
   | Plus of expr * expr  		(* Sum [e1 + e2] *)
   | Minus of expr * expr 		(* Difference [e1 - e2] *)
+  | Division of expr * expr   (* Quotient [e1 / e2] *)
   | Equal of expr * expr 		(* Integer comparison [e1 = e2] *)
   | Less of expr * expr  		(* Integer comparison [e1 < e2] *)
   | If of expr * expr * expr 		(* Conditional [if e1 then e2 else e3] *)
